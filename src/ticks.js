@@ -54,7 +54,10 @@ const http = {
 };
 
 const init = () => {
-	config.load('config.json');
+	return q.fcall(() => config.load('config.json'))
+	.then(() => {
+		return;
+	});
 };
 
 const load_ticks = () => {
@@ -143,6 +146,7 @@ module.exports = {
 	init: init,
 	load_ticks: load_ticks,
 	normalize_tick: normalize_tick,
+	set_tick: set_tick,
 	static_website_url: static_website_url,
 	store_ticks: store_ticks,
 	ticks: ticks

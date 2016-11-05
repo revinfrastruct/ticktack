@@ -51,7 +51,7 @@ To update the same message:
 
 To set/update both message content and the timestamp:
 
-	$ echo "This is a message." | ticktack set --timestamp 1478383914 5
+	$ echo "This is a message." | ticktack set --time 1478383914 5
 
 ### Delete a ticker message
 

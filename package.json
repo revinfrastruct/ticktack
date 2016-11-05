@@ -1,12 +1,13 @@
 {
   "name": "ticktack",
   "version": "0.0.1",
-  "description": "",
+  "description": "Command line backend for Live Ticker feed.",
   "main": "index.js",
   "private": true,
   "dependencies": {
     "aws-sdk": "2.6.15",
     "commander": "2.9.0",
+    "get-stdin": "5.0.1",
     "q": "1.4.1",
     "request": "2.78.0",
     "request-promise": "4.1.1",
