@@ -33,12 +33,12 @@ describe('ticks', () => {
 		});
 	});
 
-	describe('get_tickername()', () => {
+	describe('get_s3_path()', () => {
 		it('returns a non-empty string', () => {
-			return ticks.get_tickername()
-			.then(ticker => {
-				expect(ticker).to.be.a('string');
-				expect(ticker).to.not.equal('');
+			return ticks.get_s3_path()
+			.then(path => {
+				expect(path).to.be.a('string');
+				expect(path).to.not.equal('');
 			})
 		});
 	});

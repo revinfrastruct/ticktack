@@ -24,11 +24,11 @@ const flush_ticks = () => {
 };
 
 const get_bucket = () => {
-	return config('aws.config', 'mybucket');
+	return config('s3.config', 'mybucket');
 };
 
 const get_region = () => {
-	return config('aws.region', 'eu-central-1');
+	return config('s3.region', 'eu-central-1');
 };
 
 const get_s3_key = () => {
@@ -39,8 +39,14 @@ const get_s3_key = () => {
 	});
 };
 
-const get_tickername = () => {
-	return config('ticker.name', 'test');
+const get_s3_path = () => {
+	return config('s3.path', '/ticktack/ticker.json')
+	.then(path => {
+		if (path.charAt(0) !== '/') {
+			return '/' + path;
+		}
+		return path;
+	});
 };
 
 const http = {
@@ -99,9 +105,9 @@ const set_tick = (id, content, time, important) => {
 };
 
 const static_website_url = () => {
-	return q.all([ get_bucket(), get_region(), get_tickername() ])
-	.spread((bucket, region, tickername) => {
-		return `https://${bucket}.s3-website.${region}.amazonaws.com/tickers/${tickername}/ticks.json`;
+	return q.all([ get_bucket(), get_region(), get_s3_path() ])
+	.spread((bucket, region, path) => {
+		return `https://${bucket}.s3-website.${region}.amazonaws.com${path}`;
 	});
 };
 
@@ -132,7 +138,7 @@ module.exports = {
 	flush_ticks: flush_ticks,
 	get_bucket: get_bucket,
 	get_region: get_region,
-	get_tickername: get_tickername,
+	get_s3_path: get_s3_path,
 	http: http,
 	init: init,
 	load_ticks: load_ticks,

@@ -30,12 +30,10 @@ Create a `config.json` in the `ticktack` directory. It should look something
 like this:
 
 		{
-		  "aws": {
+		  "s3": {
 			"bucket": "<the bucket you use>",
-			"region": "<the aws region you use>"
-		  },
-		  "ticker": {
-			"name": "<unique string identifying the ticker>"
+			"region": "<the aws region you use>",
+			"path": "/some/path/ticker.json"
 		  }
 		}
 
@@ -69,4 +67,7 @@ entire feed will be downloaded and then uploaded again. Keep that in mind when
 making your technology choices.
 * The concurrency control is not great. Try to not run multiple instances
 updating the same feed at the same time.
+* The ID for a single message is just some string. In the examples above, it is
+the number `5`, however it can really be any string. It just have to be unique
+for each message.
 
