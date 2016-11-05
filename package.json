@@ -6,6 +6,7 @@
   "private": true,
   "dependencies": {
     "aws-sdk": "2.6.15",
+    "commander": "2.9.0",
     "q": "1.4.1",
     "request": "2.78.0",
     "request-promise": "4.1.1",
