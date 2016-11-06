@@ -12,16 +12,16 @@ and Amazon SNS for push notifications on any updates.
 
 ### 1. Install nodejs dependencies
 
-		$ npm install
+	$ npm install
 
 ### 2. Set AWS credentials
 
 Just as `aws-cli`, this script depends on a credentials file at
 `~/.aws/credentials`. It should look something like this:
 
-		[default]
-		aws_access_key_id = <your access key id>
-		aws_secret_access_key = <your secret access key>
+	[default]
+	aws_access_key_id = <your access key id>
+	aws_secret_access_key = <your secret access key>
 
 
 ### 3. Create a configuration for this script.
@@ -29,13 +29,13 @@ Just as `aws-cli`, this script depends on a credentials file at
 Create a `config.json` in the `ticktack` directory. It should look something
 like this:
 
-		{
-		  "s3": {
+	{
+		"s3": {
 			"bucket": "<the bucket you use>",
 			"region": "<the aws region you use>",
 			"path": "/some/path/ticker.json"
-		  }
 		}
+	}
 
 ## How to use
 
