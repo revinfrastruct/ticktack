@@ -60,10 +60,6 @@ const init = () => {
 
 const load_ticks = () => {
 	return static_website_url()
-	.then(url => {
-		console.log(url);
-		return url;
-	})
 	.then(http.get)
 	.catch(err => {
 		if (err.statusCode === 403) {

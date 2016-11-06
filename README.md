@@ -53,6 +53,10 @@ To set/update both message content and the timestamp:
 
 	$ echo "This is a message." | ticktack set --time 1478383914 5
 
+### To display your live ticker messages
+
+	$ ticktack list
+
 ### Delete a ticker message
 
 This will remove the message with ID `5`:
