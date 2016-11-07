@@ -132,7 +132,9 @@ const store_ticks = () => {
 			Bucket: bucket,
 			Key: s3_key,
 			Body: JSON.stringify(ticks),
-			ACL: 'public-read'
+			ACL: 'public-read',
+			ContentType: 'application/json',
+			ContentEncoding: 'utf-8'
 		}, err => {
 			if (err) {
 				deferred.reject(err);
