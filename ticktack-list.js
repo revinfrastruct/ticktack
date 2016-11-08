@@ -14,5 +14,5 @@ if (commandline.args.length > 0) {
 ticks.init()
 .then(() => ticks.load_ticks())
 .then(() => {
-	console.log(ticks.ticks);
+	console.log(JSON.stringify(ticks.ticks));
 });
