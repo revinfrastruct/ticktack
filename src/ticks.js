@@ -11,6 +11,9 @@ const delete_tick = (key) => {
 	return q.fcall(() => {
 		if (typeof ticks[key] !== 'undefined') {
 			delete ticks[key];
+			if (deletes.indexOf(key) === -1) {
+				deletes.push(key);
+			}
 		}
 	});
 };
@@ -74,16 +77,31 @@ const load_ticks = () => {
 		return data;
 	})
 	.then(data => {
+		if (typeof data['-'] !== 'undefined') {
+			data['-'].forEach(key => {
+				if (deletes.indexOf(key) === -1) {
+					deletes.push(key);
+				}
+				if (typeof ticks[key] !== 'undefined') {
+					delete ticks[key];
+				}
+			});
+		}
 		return flush_ticks()
 		.then(() => {
 			var normalize_all = [];
 			Object.keys(data).forEach(key => {
-				normalize_all.push((key => {
-					return normalize_tick(data[key])
-					.then(data => {
-						ticks[key] = data;
-					})
-				})(key));
+				if (key !== '-') {
+					normalize_all.push((key => {
+						return normalize_tick(data[key])
+						.then(data => {
+							ticks[key] = data;
+							if (deletes.indexOf(key) !== -1) {
+								deletes.splice(deletes.indexOf(key), 1);
+							}
+						})
+					})(key));
+				}
 			});
 			return q.all(normalize_all);
 		});
@@ -113,6 +131,9 @@ const set_tick = (id, content, time, important) => {
 		})
 		.then(tick => {
 			ticks[id] = tick;
+			if (deletes.indexOf(id) !== -1) {
+				deletes.splice(deletes.indexOf(id), 1);
+			}
 		});
 	});
 };
@@ -128,6 +149,7 @@ const store_ticks = () => {
 	return q.all([ get_bucket(), get_region(), get_s3_path() ])
 	.spread((bucket, region, s3_key) => {
 		let deferred = q.defer();
+		ticks['-'] = deletes;
 		s3.putObject({
 			Bucket: bucket,
 			Key: s3_key,
@@ -142,11 +164,13 @@ const store_ticks = () => {
 				deferred.resolve();
 			}
 		});
+		delete ticks['-'];
 		return deferred.promise;
 	});
 };
 
 const ticks = {};
+const deletes = [];
 
 module.exports = {
 	config: config,
