@@ -7,22 +7,21 @@ const url = require('url');
 const config = smplcnf();
 var s3;
 
-const delete_tick = (key) => {
+const delete_tick = id => {
 	return q.fcall(() => {
-		if (typeof ticks[key] !== 'undefined') {
-			delete ticks[key];
-			if (deletes.indexOf(key) === -1) {
-				deletes.push(key);
-			}
-		}
+		data['+'] = data['+'].filter(item => id !== item.id);
 	});
 };
 
-const flush_ticks = () => {
+const find_tick = id => {
 	return q.fcall(() => {
-		Object.keys(ticks).forEach(key => {
-			delete ticks[key];
-		});
+		return data['+'].filter(item => item.id === id);
+	})
+	.then(matches => {
+		if (matches.length === 0) {
+			throw new Error('No tick was found.');
+		}
+		return matches[0]; // Return the first one. (Hope there is just one.)
 	});
 };
 
@@ -56,8 +55,6 @@ const init = () => {
 			apiVersion: '2006-03-01',
 			region: region
 		});
-
-		return;
 	});
 };
 
@@ -70,41 +67,27 @@ const load_ticks = () => {
 		}
 		throw new Error('Could not read current ticks from Amazon S3.');
 	})
-	.then(data => {
-		if (typeof data === 'string') {
-			return JSON.parse(data);
+	.then(newdata => {
+		if (typeof newdata === 'string') {
+			return JSON.parse(newdata);
 		}
-		return data;
+		return newdata;
 	})
-	.then(data => {
-		if (typeof data['-'] !== 'undefined') {
-			data['-'].forEach(key => {
-				if (deletes.indexOf(key) === -1) {
-					deletes.push(key);
-				}
-				if (typeof ticks[key] !== 'undefined') {
-					delete ticks[key];
-				}
+	.then(newdata => {
+		if (typeof newdata['-'] !== 'undefined') {
+			return Q.all(newdata['-'].map(item => delete_tick(item)))
+			.then(() => {
+				return newdata;
 			});
 		}
-		return flush_ticks()
-		.then(() => {
-			var normalize_all = [];
-			Object.keys(data).forEach(key => {
-				if (key !== '-') {
-					normalize_all.push((key => {
-						return normalize_tick(data[key])
-						.then(data => {
-							ticks[key] = data;
-							if (deletes.indexOf(key) !== -1) {
-								deletes.splice(deletes.indexOf(key), 1);
-							}
-						})
-					})(key));
-				}
+	})
+	.then(newdata => {
+		if (typeof newdata['+'] !== 'undefined') {
+			return Q.all(newdata['+'].map(item => set_tick(item)))
+			.then(() => {
+				return newdata;
 			});
-			return q.all(normalize_all);
-		});
+		}
 	});
 };
 
@@ -115,6 +98,9 @@ const normalize_tick = data => {
 			"time": Math.round((new Date()).getTime() / 1000),
 			"important": false
 		};
+		if (typeof data.id === 'undefined') {
+			throw new Error('No ID in tick data.');
+		}
 		if (data.content) result.content = data.content;
 		if (data.time) result.time = parseInt(data.time);
 		if (data.important) result.important = data.important;
@@ -125,15 +111,27 @@ const normalize_tick = data => {
 const set_tick = (id, content, time, important) => {
 	return q.fcall(() => {
 		normalize_tick({
-			"content": content,
-			"time": time,
-			"important": important
+			id: id,
+			content: content,
+			time: time,
+			important: important
 		})
-		.then(tick => {
-			ticks[id] = tick;
-			if (deletes.indexOf(id) !== -1) {
-				deletes.splice(deletes.indexOf(id), 1);
-			}
+		.then(newtick => {
+			find_tick(newtick.id)
+			.then(oldtick => {
+				if (oldtick.content !== newtick.content
+				|| oldtick.time !== newtick.time
+				|| oldtick.important !== newtick.important) {
+					oldtick.content = newtick.content;
+					oldtick.time = newtick.time;
+					oldtick.important = newtick.importan;
+				} else {
+					// No changes.
+				}
+			})
+			.catch(() => {
+				data['+'].push(tick);
+			});
 		});
 	});
 };
@@ -149,11 +147,10 @@ const store_ticks = () => {
 	return q.all([ get_bucket(), get_region(), get_s3_path() ])
 	.spread((bucket, region, s3_key) => {
 		let deferred = q.defer();
-		ticks['-'] = deletes;
 		s3.putObject({
 			Bucket: bucket,
 			Key: s3_key,
-			Body: JSON.stringify(ticks),
+			Body: JSON.stringify(data),
 			ACL: 'public-read',
 			ContentType: 'application/json',
 			ContentEncoding: 'utf-8'
@@ -164,27 +161,26 @@ const store_ticks = () => {
 				deferred.resolve();
 			}
 		});
-		delete ticks['-'];
 		return deferred.promise;
 	});
 };
 
-const ticks = {};
-const deletes = [];
+const data = {
+	"+": [],
+	"-": []
+};
 
 module.exports = {
-	config: config,
-	delete_tick: delete_tick,
-	flush_ticks: flush_ticks,
-	get_bucket: get_bucket,
-	get_region: get_region,
-	get_s3_path: get_s3_path,
-	http: http,
-	init: init,
-	load_ticks: load_ticks,
-	normalize_tick: normalize_tick,
-	set_tick: set_tick,
-	static_website_url: static_website_url,
-	store_ticks: store_ticks,
-	ticks: ticks
+	config,
+	delete_tick,
+	get_bucket,
+	get_region,
+	get_s3_path,
+	http,
+	init,
+	load_ticks,
+	normalize_tick,
+	set_tick,
+	static_website_url,
+	store_ticks
 };
