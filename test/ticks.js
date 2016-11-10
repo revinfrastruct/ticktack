@@ -73,6 +73,23 @@ describe('ticks', () => {
 				}
 			]
 		};
+		describe('pass 0', () => {
+			before(() => {
+				ticks.http.get = testdouble.function();
+				return ticks.static_website_url()
+				.then(ticks_url => {
+					testdouble.when(ticks.http.get(ticks_url)).thenResolve([]);
+				});
+			});
+			it('should be blank if no data was loaded', () => {
+				return ticks.load_ticks()
+				.then(data => {
+					expect(ticks.data).to.deep.equal({
+						"+": [], "-": []
+					});
+				});
+			});
+		});
 		describe('pass 1', () => {
 			before(() => {
 				ticks.http.get = testdouble.function();
