@@ -8,8 +8,10 @@ describe('ticks', () => {
 	describe('init()', () => {
 		it('should load configuration from config.json', () => {
 			ticks.config.load = testdouble.function();
-			ticks.init();
-			testdouble.verify(ticks.config.load('config.json'));
+			return ticks.init()
+			.then(() => {
+				testdouble.verify(ticks.config.load('config.json'));
+			});
 		});
 	});
 
@@ -55,19 +57,23 @@ describe('ticks', () => {
 	});
 
 	describe('load_ticks()', () => {
-		describe('pass 1', () => {
-			const test_data = {
-				"4": {
+		const test_data = {
+			"+": [
+				{
+					"id": "4",
 					"content": "<p>Yo</p>",
 					"time": 1478316163,
 					"important": true
 				},
-				"10": {
-					"content": "<p>Yo</p>",
-					"time": 1478316163,
-					"important": true
+				{
+					"id": "10",
+					"content": "<p>Yo yo</p>",
+					"time": 1478316164,
+					"important": false
 				}
-			};
+			]
+		};
+		describe('pass 1', () => {
 			before(() => {
 				ticks.http.get = testdouble.function();
 				return ticks.static_website_url()
@@ -78,22 +84,51 @@ describe('ticks', () => {
 			it('should load memory with ticks', () => {
 				return ticks.load_ticks()
 				.then(data => {
-					expect(ticks.ticks).to.deep.equal(test_data);
+					expect(ticks.data['+']).to.deep.equal(test_data['+']);
 					
 					// They should not be the same object, just idential objects:
-					test_data['10'].content = '<p>Something else</p>';
-					expect(ticks.ticks).to.not.deep.equal(test_data);
+					test_data['+'][0].content = '<p>Something else</p>';
+					expect(ticks.data['+']).to.not.deep.equal(test_data['+']);
 				});
 			});
 		});
 		describe('pass 2', () => {
-			const test_data = {
-				"10": {
-					"content": "<p>Yo</p>",
-					"time": 1478316163,
-					"important": true
-				}
+			before(() => {
+				ticks.http.get = testdouble.function();
+				return ticks.static_website_url()
+				.then(ticks_url => {
+					testdouble.when(ticks.http.get(ticks_url)).thenResolve({
+						"+": [ test_data['+'][0] ]
+					});
+				});
+			});
+			it('should keep stuff in memory if not deleted', () => {
+				return ticks.load_ticks()
+				.then(data => {
+					expect(ticks.data['+']).to.deep.equal(test_data['+']);
+				});
+			});
+		});
+		describe('pass 3', () => {
+			const pass_3_test_data = {
+				"-": [ test_data['+'][1].id ]
 			};
+			before(() => {
+				ticks.http.get = testdouble.function();
+				return ticks.static_website_url()
+				.then(ticks_url => {
+					testdouble.when(ticks.http.get(ticks_url)).thenResolve(pass_3_test_data);
+				});
+			});
+			it('should delete ticks marked for deletion', () => {
+				return ticks.load_ticks()
+				.then(data => {
+					expect(ticks.data['+']).to.deep.equal([ test_data['+'][0] ]);
+					expect(ticks.data['-']).to.deep.equal([ test_data['+'][1].id ]);
+				});
+			});
+		});
+		describe('pass 4', () => {
 			before(() => {
 				ticks.http.get = testdouble.function();
 				return ticks.static_website_url()
@@ -101,10 +136,11 @@ describe('ticks', () => {
 					testdouble.when(ticks.http.get(ticks_url)).thenResolve(test_data);
 				});
 			});
-			it('should not keep old (key "4") data after loading batch with deleted ticks', () => {
+			it('should remove ticks from deleted array if they are re-added', () => {
 				return ticks.load_ticks()
 				.then(data => {
-					expect(ticks.ticks).to.deep.equal(test_data);
+					expect(ticks.data['+']).to.deep.equal(test_data['+']);
+					expect(ticks.data['-']).to.deep.equal([]);
 				});
 			});
 		});

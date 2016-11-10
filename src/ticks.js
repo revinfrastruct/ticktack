@@ -10,6 +10,9 @@ var s3;
 const delete_tick = id => {
 	return q.fcall(() => {
 		data['+'] = data['+'].filter(item => id !== item.id);
+		if (data['-'].indexOf(id) === -1) {
+			data['-'].push(id);
+		}
 	});
 };
 
@@ -75,15 +78,16 @@ const load_ticks = () => {
 	})
 	.then(newdata => {
 		if (typeof newdata['-'] !== 'undefined') {
-			return Q.all(newdata['-'].map(item => delete_tick(item)))
+			return q.all(newdata['-'].map(item => delete_tick(item)))
 			.then(() => {
 				return newdata;
 			});
 		}
+		return newdata;
 	})
 	.then(newdata => {
 		if (typeof newdata['+'] !== 'undefined') {
-			return Q.all(newdata['+'].map(item => set_tick(item)))
+			return q.all(newdata['+'].map(item => set_tick(item.id, item.content, item.time, item.important)))
 			.then(() => {
 				return newdata;
 			});
@@ -101,6 +105,7 @@ const normalize_tick = data => {
 		if (typeof data.id === 'undefined') {
 			throw new Error('No ID in tick data.');
 		}
+		result.id = data.id;
 		if (data.content) result.content = data.content;
 		if (data.time) result.time = parseInt(data.time);
 		if (data.important) result.important = data.important;
@@ -109,29 +114,28 @@ const normalize_tick = data => {
 };
 
 const set_tick = (id, content, time, important) => {
-	return q.fcall(() => {
-		normalize_tick({
-			id: id,
-			content: content,
-			time: time,
-			important: important
+	return normalize_tick({
+		id: id,
+		content: content,
+		time: time,
+		important: important
+	})
+	.then(newtick => {
+		return find_tick(newtick.id)
+		.then(oldtick => {
+			if (oldtick.content !== newtick.content) {
+				oldtick.content = newtick.content;
+			}
+			if (oldtick.time !== newtick.time) {
+				oldtick.time = newtick.time;
+			}
+			if (oldtick.important !== newtick.important) {
+				oldtick.important = newtick.important;
+			}
 		})
-		.then(newtick => {
-			find_tick(newtick.id)
-			.then(oldtick => {
-				if (oldtick.content !== newtick.content
-				|| oldtick.time !== newtick.time
-				|| oldtick.important !== newtick.important) {
-					oldtick.content = newtick.content;
-					oldtick.time = newtick.time;
-					oldtick.important = newtick.importan;
-				} else {
-					// No changes.
-				}
-			})
-			.catch(() => {
-				data['+'].push(tick);
-			});
+		.catch(() => {
+			data['+'].push(newtick);
+			data['-'] = data['-'].filter(item => item !== newtick.id);
 		});
 	});
 };
@@ -172,6 +176,7 @@ const data = {
 
 module.exports = {
 	config,
+	data,
 	delete_tick,
 	get_bucket,
 	get_region,
