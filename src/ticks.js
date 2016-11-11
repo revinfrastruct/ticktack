@@ -1,4 +1,7 @@
 const aws = require('aws-sdk');
+const exec = require('child-process-promise').exec;
+const fs = require('fs-promise');
+const md5 = require('md5-file/promise');
 const q = require('q');
 const request = require('request-promise');
 const smplcnf = require('smplcnf');
@@ -30,6 +33,16 @@ const find_tick = id => {
 
 const get_bucket = () => {
 	return config('s3.bucket', 'mybucket');
+};
+
+const get_media_path = () => {
+	return config('s3.media_path', '/ticktack/media')
+	.then(path => {
+		if (path.charAt(0) === '/') {
+			return path.substr(1);
+		}
+		return path;
+	});
 };
 
 const get_region = () => {
@@ -87,7 +100,7 @@ const load_ticks = () => {
 	})
 	.then(newdata => {
 		if (typeof newdata['+'] !== 'undefined') {
-			return q.all(newdata['+'].map(item => set_tick(item.id, item.content, item.time, item.important)))
+			return q.all(newdata['+'].map(item => set_tick(item.id, item.content, item.time, item.important, item.media)))
 			.then(() => {
 				return newdata;
 			});
@@ -105,6 +118,15 @@ const normalize_tick = data => {
 		if (typeof data.id === 'undefined') {
 			throw new Error('No ID in tick data.');
 		}
+		if (typeof data.media === 'string' && data.media !== '') {
+			result.media = {
+				"src": data.media,
+				"w": 0,
+				"h": 0
+			};
+		} else if (typeof data.media === 'object') {
+			result.media = data.media;
+		}
 		result.id = data.id;
 		if (data.content) result.content = data.content;
 		if (data.time) result.time = parseInt(data.time);
@@ -113,12 +135,23 @@ const normalize_tick = data => {
 	});
 };
 
-const set_tick = (id, content, time, important) => {
+const set_tick = (id, content, time, important, media) => {
 	return normalize_tick({
 		id: id,
 		content: content,
 		time: time,
-		important: important
+		important: important,
+		media: media
+	})
+	.then(newtick => {
+		if (typeof newtick.media === 'undefined') {
+			return newtick;
+		}
+		return store_media(newtick.media)
+		.then(media => {
+			newtick.media = media;
+			return newtick;
+		});
 	})
 	.then(newtick => {
 		return find_tick(newtick.id)
@@ -131,6 +164,9 @@ const set_tick = (id, content, time, important) => {
 			}
 			if (oldtick.important !== newtick.important) {
 				oldtick.important = newtick.important;
+			}
+			if (oldtick.media !== newtick.media) {
+				oldtick.media = newtick.media;
 			}
 		})
 		.catch(() => {
@@ -147,6 +183,59 @@ const static_website_url = () => {
 	});
 };
 
+const store_media = oldmedia => {
+	return fs.exists(oldmedia.src)
+	.then(() => {
+		return exec('identify ' + oldmedia.src)
+		.then(result => {
+			const imginfo = result.stdout.split(' ');
+			if (imginfo['1'] !== 'JPEG') {
+				throw new Error('Not a jpeg image.');
+			}
+
+			let width, height;
+			[ width, height ] = imginfo['2'].split('x');
+
+			return q.all([ get_bucket(), get_region(), get_media_path(), md5(oldmedia.src), fs.readFile(oldmedia.src) ])
+			.spread((bucket, region, s3_path, checksum, filedata) => {
+				const s3_key = s3_path + '/' + checksum + '.jpg';
+				let deferred = q.defer();
+				s3.putObject({
+					Bucket: bucket,
+					Key: s3_key,
+					Body: filedata,
+					ACL: 'public-read',
+					ContentType: 'image/jpeg'
+				}, err => {
+					if (err) {
+						deferred.reject(err);
+					} else {
+						deferred.resolve(s3_key);
+					}
+				});
+				return deferred.promise;
+			})
+			.then(s3_key => {
+				return get_bucket()
+				.then(bucket => {
+					return `https://${bucket}.s3.amazonaws.com/${s3_key}`;
+				});
+			})
+			.then(newurl => {
+				return {
+					src: newurl,
+					w: width,
+					h: height
+				};
+			});
+
+		});
+	})
+	.catch(err => {
+		return oldmedia;
+	});
+};
+
 const store_ticks = () => {
 	return q.all([ get_bucket(), get_region(), get_s3_path() ])
 	.spread((bucket, region, s3_key) => {
@@ -154,13 +243,16 @@ const store_ticks = () => {
 		s3.putObject({
 			Bucket: bucket,
 			Key: s3_key,
-			Body: JSON.stringify(data),
+			Body: JSON.stringify({
+				"+": data["+"],
+				"-": data["-"].filter(item => item !== '+').filter(item => item !== '-')
+			}),
 			ACL: 'public-read',
 			ContentType: 'application/json',
 			ContentEncoding: 'utf-8'
 		}, err => {
-			if (err) {
-				deferred.reject(err);
+		if (err) {
+			deferred.reject(err);
 			} else {
 				deferred.resolve();
 			}
