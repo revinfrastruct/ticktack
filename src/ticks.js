@@ -100,7 +100,9 @@ const initial_data = () => {
 			"+": [],
 			"-": data["-"]
 		};
-		for (let i = 0; i < 10 && i < data["+"].length; i++) {
+		let first = data["+"].length - 10;
+		if (first < 0) first = 0;
+		for (let i = first; i < data["+"].length; i++) {
 			initdata['+'].push(data['+'][i]);
 		}
 		return initdata;
@@ -219,7 +221,7 @@ const set_tick = (id, content, time, important, media) => {
 		});
 	})
 	.then(() => {
-		data['+'].sort((a, b) => b.time - a.time);
+		data['+'].sort((a, b) => a.time - b.time);
 	});
 };
 
