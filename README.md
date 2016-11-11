@@ -33,7 +33,12 @@ like this:
 		"s3": {
 			"bucket": "<the bucket you use>",
 			"region": "<the aws region you use>",
-			"path": "/some/path/ticker.json"
+			"media_path": "/tickers/media"
+		},
+		"feeds": {
+			"full": "/tickers/data/myevent.json",
+			"initial": "/tickers/data/myevent.initial.json",
+			"latest": "/tickers/data/myevent.latest.json"
 		}
 	}
 

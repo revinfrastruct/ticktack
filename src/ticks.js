@@ -50,7 +50,27 @@ const get_region = () => {
 };
 
 const get_s3_path = () => {
-	return config('s3.path', '/ticktack/ticker.json')
+	return config('feeds.full', '/ticktack/ticker.json')
+	.then(path => {
+		if (path.charAt(0) === '/') {
+			return path.substr(1);
+		}
+		return path;
+	});
+};
+
+const get_s3_initial_path = () => {
+	return config('feeds.initial', '/ticktack/ticker-initial.json')
+	.then(path => {
+		if (path.charAt(0) === '/') {
+			return path.substr(1);
+		}
+		return path;
+	});
+};
+
+const get_s3_latest_path = () => {
+	return config('feeds.latest', '/ticktack/ticker-latest.json')
 	.then(path => {
 		if (path.charAt(0) === '/') {
 			return path.substr(1);
@@ -71,6 +91,30 @@ const init = () => {
 			apiVersion: '2006-03-01',
 			region: region
 		});
+	});
+};
+
+const initial_data = () => {
+	return q.fcall(() => {
+		const initdata = {
+			"+": [],
+			"-": data["-"]
+		};
+		for (let i = 0; i < 10 && i < data["+"].length; i++) {
+			initdata['+'].push(data['+'][i]);
+		}
+		return initdata;
+	});
+};
+
+const latest_data = () => {
+	return q.fcall(() => {
+		const latest = {
+			"+": [],
+			"-": data["-"]
+		};
+		latest['+'] = data['+'].filter(item => item.time >= Math.floor(new Date().getTime() / 1000) - (60 * 5));
+		return latest;
 	});
 };
 
@@ -173,6 +217,9 @@ const set_tick = (id, content, time, important, media) => {
 			data['+'].push(newtick);
 			data['-'] = data['-'].filter(item => item !== newtick.id);
 		});
+	})
+	.then(() => {
+		data['+'].sort((a, b) => b.time - a.time);
 	});
 };
 
@@ -237,27 +284,91 @@ const store_media = oldmedia => {
 };
 
 const store_ticks = () => {
+	return q.all([
+		store_full_ticks(),
+		store_initial_ticks(),
+		store_latest_ticks()
+	]);
+};
+
+const store_full_ticks = () => {
 	return q.all([ get_bucket(), get_region(), get_s3_path() ])
 	.spread((bucket, region, s3_key) => {
-		let deferred = q.defer();
-		s3.putObject({
-			Bucket: bucket,
-			Key: s3_key,
-			Body: JSON.stringify({
-				"+": data["+"],
-				"-": data["-"].filter(item => item !== '+').filter(item => item !== '-')
-			}),
-			ACL: 'public-read',
-			ContentType: 'application/json',
-			ContentEncoding: 'utf-8'
-		}, err => {
-		if (err) {
-			deferred.reject(err);
-			} else {
-				deferred.resolve();
-			}
-		});
-		return deferred.promise;
+		return q.fcall(() => {
+			let deferred = q.defer();
+			s3.putObject({
+				Bucket: bucket,
+				Key: s3_key,
+				Body: JSON.stringify({
+					"+": data["+"],
+					"-": data["-"].filter(item => item !== '+').filter(item => item !== '-')
+				}),
+				ACL: 'public-read',
+				ContentType: 'application/json',
+				ContentEncoding: 'utf-8'
+			}, err => {
+			if (err) {
+				deferred.reject(err);
+				} else {
+					deferred.resolve();
+				}
+			});
+			return deferred.promise;
+		})
+	});
+};
+
+const store_initial_ticks = () => {
+	return q.all([ get_bucket(), get_region(), get_s3_initial_path(), initial_data() ])
+	.spread((bucket, region, s3_key, data) => {
+		return q.fcall(() => {
+			let deferred = q.defer();
+			s3.putObject({
+				Bucket: bucket,
+				Key: s3_key,
+				Body: JSON.stringify({
+					"+": data["+"],
+					"-": data["-"].filter(item => item !== '+').filter(item => item !== '-')
+				}),
+				ACL: 'public-read',
+				ContentType: 'application/json',
+				ContentEncoding: 'utf-8'
+			}, err => {
+			if (err) {
+				deferred.reject(err);
+				} else {
+					deferred.resolve();
+				}
+			});
+			return deferred.promise;
+		})
+	});
+};
+
+const store_latest_ticks = () => {
+	return q.all([ get_bucket(), get_region(), get_s3_latest_path(), latest_data() ])
+	.spread((bucket, region, s3_key, data) => {
+		return q.fcall(() => {
+			let deferred = q.defer();
+			s3.putObject({
+				Bucket: bucket,
+				Key: s3_key,
+				Body: JSON.stringify({
+					"+": data["+"],
+					"-": data["-"].filter(item => item !== '+').filter(item => item !== '-')
+				}),
+				ACL: 'public-read',
+				ContentType: 'application/json',
+				ContentEncoding: 'utf-8'
+			}, err => {
+			if (err) {
+				deferred.reject(err);
+				} else {
+					deferred.resolve();
+				}
+			});
+			return deferred.promise;
+		})
 	});
 };
 

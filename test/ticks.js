@@ -62,13 +62,13 @@ describe('ticks', () => {
 				{
 					"id": "4",
 					"content": "<p>Yo</p>",
-					"time": 1478316163,
+					"time": 1478316164,
 					"important": true
 				},
 				{
 					"id": "10",
 					"content": "<p>Yo yo</p>",
-					"time": 1478316164,
+					"time": 1478316163,
 					"important": false
 				}
 			]
