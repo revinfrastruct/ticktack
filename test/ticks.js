@@ -100,12 +100,18 @@ describe('ticks', () => {
 			});
 			it('should load memory with ticks', () => {
 				return ticks.load_ticks()
-				.then(data => {
-					expect(ticks.data['+']).to.deep.equal(test_data['+']);
+				.then(() => {
+					// Use clone, so we safely can remove the updated property:
+					ticks_data = Object.assign({}, ticks.data);
+					// Dont include updated in comparison:
+					delete ticks_data['+'][0]['updated'];
+					delete ticks_data['+'][1]['updated'];
+
+					expect(ticks_data['+']).to.deep.equal(test_data['+']);
 					
 					// They should not be the same object, just idential objects:
 					test_data['+'][0].content = '<p>Something else</p>';
-					expect(ticks.data['+']).to.not.deep.equal(test_data['+']);
+					expect(ticks_data['+']).to.not.deep.equal(test_data['+']);
 				});
 			});
 		});
@@ -122,7 +128,13 @@ describe('ticks', () => {
 			it('should keep stuff in memory if not deleted', () => {
 				return ticks.load_ticks()
 				.then(data => {
-					expect(ticks.data['+']).to.deep.equal(test_data['+']);
+					// Use clone, so we safely can remove the updated property:
+					ticks_data = Object.assign({}, ticks.data);
+					// Dont include updated in comparison:
+					delete ticks_data['+'][0]['updated'];
+					delete ticks_data['+'][1]['updated'];
+
+					expect(ticks_data['+']).to.deep.equal(test_data['+']);
 				});
 			});
 		});
@@ -156,8 +168,14 @@ describe('ticks', () => {
 			it('should remove ticks from deleted array if they are re-added', () => {
 				return ticks.load_ticks()
 				.then(data => {
-					expect(ticks.data['+']).to.deep.equal(test_data['+']);
-					expect(ticks.data['-']).to.deep.equal([]);
+					// Use clone, so we safely can remove the updated property:
+					ticks_data = Object.assign({}, ticks.data);
+					// Dont include updated in comparison:
+					delete ticks_data['+'][0]['updated'];
+					delete ticks_data['+'][1]['updated'];
+
+					expect(ticks_data['+']).to.deep.equal(test_data['+']);
+					expect(ticks_data['-']).to.deep.equal([]);
 				});
 			});
 		});
