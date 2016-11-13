@@ -21,13 +21,11 @@ const delete_tick = id => {
 
 const find_tick = id => {
 	return q.fcall(() => {
-		return data['+'].filter(item => item.id === id);
-	})
-	.then(matches => {
-		if (matches.length === 0) {
+		const match = data['+'].find(item => item.id === id);
+		if (typeof match === 'undefined') {
 			throw new Error('No tick was found.');
 		}
-		return matches[0]; // Return the first one. (Hope there is just one.)
+		return match;
 	});
 };
 
@@ -104,14 +102,9 @@ const init = () => {
 const initial_data = () => {
 	return q.fcall(() => {
 		const initdata = {
-			"+": [],
-			"-": data["-"]
+			'+': data['+'].slice(-10),
+			'-': data['-']
 		};
-		let first = data["+"].length - 10;
-		if (first < 0) first = 0;
-		for (let i = first; i < data["+"].length; i++) {
-			initdata['+'].push(data['+'][i]);
-		}
 		return initdata;
 	});
 };
@@ -119,8 +112,8 @@ const initial_data = () => {
 const latest_data = () => {
 	return q.fcall(() => {
 		const latest = {
-			"+": [],
-			"-": data["-"]
+			'+': [],
+			'-': data['-']
 		};
 		latest['+'] = data['+'].filter(item => item.updated >= now() - (60 * 5));
 		return latest;
@@ -398,8 +391,8 @@ const store_latest_ticks = () => {
 };
 
 const data = {
-	"+": [],
-	"-": []
+	'+': [],
+	'-': []
 };
 
 module.exports = {
