@@ -204,6 +204,41 @@ const normalize_tick = data => {
 	});
 };
 
+const s3upload = (s3_key, data, content_type, content_encoding) => {
+	return q.all([ get_bucket(), get_region() ])
+	.spread((bucket, region) => {
+		return q.fcall(() => {
+			const deferred = q.defer();
+			const options = {
+				Bucket: bucket,
+				Key: s3_key,
+				ACL: 'public-read'
+			};
+			if (typeof data === 'object') {
+				options.Body = JSON.stringify(data);
+				options.ContentType = 'application/json';
+				options.ContentEncoding = 'utf-8';
+			} else {
+				options.Body = data;
+			}
+			if (content_type) {
+				options.ContentType = content_type;
+			}
+			if (content_encoding) {
+				options.ContentEncoding;
+			}
+			s3.putObject(options, err => {
+				if (err) {
+					deferred.reject(err);
+				} else {
+					deferred.resolve(s3_key);
+				}
+			});
+			return deferred.promise;
+		});
+	});
+};
+
 const set_tick = (id, content, time, important, media) => {
 	return normalize_tick({
 		id: id,
@@ -310,24 +345,9 @@ const store_media = oldmedia => {
 			let width, height;
 			[ width, height ] = imginfo['2'].split('x');
 
-			return q.all([ get_bucket(), get_region(), get_media_path(), md5(oldmedia.src), fs.readFile(oldmedia.src) ])
-			.spread((bucket, region, s3_path, checksum, filedata) => {
-				const s3_key = s3_path + '/' + checksum + '.jpg';
-				let deferred = q.defer();
-				s3.putObject({
-					Bucket: bucket,
-					Key: s3_key,
-					Body: filedata,
-					ACL: 'public-read',
-					ContentType: 'image/jpeg'
-				}, err => {
-					if (err) {
-						deferred.reject(err);
-					} else {
-						deferred.resolve(s3_key);
-					}
-				});
-				return deferred.promise;
+			return q.all([ get_media_path(), md5(oldmedia.src), fs.readFile(oldmedia.src) ])
+			.spread((s3_path, checksum, filedata) => {
+				return s3upload(s3_path + '/' + checksum + '.jpg', filedata, 'image/jpeg');
 			})
 			.then(s3_key => {
 				return get_bucket()
@@ -359,74 +379,21 @@ const store_ticks = () => {
 };
 
 const store_full_ticks = () => {
-	return q.all([ get_bucket(), get_region(), get_s3_path() ])
-	.spread((bucket, region, s3_key) => {
-		return q.fcall(() => {
-			let deferred = q.defer();
-			s3.putObject({
-				Bucket: bucket,
-				Key: s3_key,
-				Body: JSON.stringify(data),
-				ACL: 'public-read',
-				ContentType: 'application/json',
-				ContentEncoding: 'utf-8'
-			}, err => {
-			if (err) {
-				deferred.reject(err);
-				} else {
-					deferred.resolve();
-				}
-			});
-			return deferred.promise;
-		})
-	});
+	return get_s3_path()
+	.then(s3_key => s3upload(s3_key, data));
 };
 
 const store_initial_ticks = () => {
-	return q.all([ get_bucket(), get_region(), get_s3_initial_path(), initial_data() ])
-	.spread((bucket, region, s3_key, data) => {
-		return q.fcall(() => {
-			let deferred = q.defer();
-			s3.putObject({
-				Bucket: bucket,
-				Key: s3_key,
-				Body: JSON.stringify(data),
-				ACL: 'public-read',
-				ContentType: 'application/json',
-				ContentEncoding: 'utf-8'
-			}, err => {
-			if (err) {
-				deferred.reject(err);
-				} else {
-					deferred.resolve();
-				}
-			});
-			return deferred.promise;
-		})
+	return q.all([ get_s3_initial_path(), initial_data() ])
+	.spread((s3_key, data) => {
+		return s3upload(s3_key, data);
 	});
 };
 
 const store_latest_ticks = () => {
-	return q.all([ get_bucket(), get_region(), get_s3_latest_path(), latest_data() ])
-	.spread((bucket, region, s3_key, data) => {
-		return q.fcall(() => {
-			let deferred = q.defer();
-			s3.putObject({
-				Bucket: bucket,
-				Key: s3_key,
-				Body: JSON.stringify(data),
-				ACL: 'public-read',
-				ContentType: 'application/json',
-				ContentEncoding: 'utf-8'
-			}, err => {
-			if (err) {
-				deferred.reject(err);
-				} else {
-					deferred.resolve();
-				}
-			});
-			return deferred.promise;
-		})
+	return q.all([ get_s3_latest_path(), latest_data() ])
+	.spread((s3_key, data) => {
+		return s3upload(s3_key, data);
 	});
 };
 
