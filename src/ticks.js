@@ -135,10 +135,7 @@ class Ticks {
 			throw new Error('Could not read current ticks from Amazon S3.');
 		})
 		.then(newdata => {
-			if (typeof newdata === 'string') {
-				return JSON.parse(newdata);
-			}
-			return newdata;
+			return JSON.parse(newdata.Body.toString());
 		})
 		.then(newdata => {
 			if (typeof newdata['-'] !== 'undefined') {
