@@ -24,10 +24,10 @@ describe('ticks', () => {
 
 	const test_data_loader = (data) => {
 		return () => {
-			ticks.http.get = testdouble.function();
-			return ticks.static_website_url()
-			.then(ticks_url => {
-				testdouble.when(ticks.http.get(ticks_url)).thenResolve(data);
+			ticks.s3download = testdouble.function();
+			return ticks.get_s3_path()
+			.then(s3_key => {
+				testdouble.when(ticks.s3download(s3_key)).thenResolve(data);
 			});
 		};
 	};
@@ -85,17 +85,6 @@ describe('ticks', () => {
 			.then(() => {
 				testdouble.verify(ticks.config.load('config.json'));
 			});
-		});
-	});
-
-	describe('static_website_url()', () => {
-		it('returns a non-empty string', () => {
-			return ticks.static_website_url()
-			.then(ticks_url => {
-				expect(ticks_url).to.be.a('string');
-				const urlparts = url.parse(ticks_url);
-				expect(urlparts.protocol).to.equal('https:');
-			})
 		});
 	});
 

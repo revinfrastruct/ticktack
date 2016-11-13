@@ -12,8 +12,6 @@
     "get-stdin": "5.0.1",
     "md5-file": "3.1.1",
     "q": "1.4.1",
-    "request": "2.78.0",
-    "request-promise": "4.1.1",
     "smplcnf": "1.1.0"
   },
   "devDependencies": {
