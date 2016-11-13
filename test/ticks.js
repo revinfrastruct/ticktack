@@ -5,6 +5,49 @@ const url = require('url');
 
 describe('ticks', () => {
 
+	const test_data = {
+		"+": [
+			{
+				"id": "4",
+				"content": "<p>Yo</p>",
+				"time": 1478316163,
+				"important": true
+			},
+			{
+				"id": "10",
+				"content": "<p>Yo yo</p>",
+				"time": 1478316164,
+				"important": false
+			}
+		]
+	};
+
+	const test_data_loader = (data) => {
+		return () => {
+			ticks.http.get = testdouble.function();
+			return ticks.static_website_url()
+			.then(ticks_url => {
+				testdouble.when(ticks.http.get(ticks_url)).thenResolve(data);
+			});
+		};
+	};
+
+	describe('flush_data()', () => {
+		before(test_data_loader(test_data));
+		it('should flush all items, including deletes', () => {
+			return ticks.flush_data()
+			.then(() => ticks.load_ticks())
+			.then(() => {
+				expect(ticks.data['+'].length).to.equal(2);
+			})
+			.then(() => ticks.flush_data())
+			.then(() => {
+				expect(ticks.data['+'].length).to.equal(0);
+			});
+		});
+		after(() => testdouble.reset());
+	});
+
 	describe('init()', () => {
 		it('should load configuration from config.json', () => {
 			ticks.config.load = testdouble.function();
@@ -57,30 +100,8 @@ describe('ticks', () => {
 	});
 
 	describe('load_ticks()', () => {
-		const test_data = {
-			"+": [
-				{
-					"id": "4",
-					"content": "<p>Yo</p>",
-					"time": 1478316163,
-					"important": true
-				},
-				{
-					"id": "10",
-					"content": "<p>Yo yo</p>",
-					"time": 1478316164,
-					"important": false
-				}
-			]
-		};
 		describe('pass 0', () => {
-			before(() => {
-				ticks.http.get = testdouble.function();
-				return ticks.static_website_url()
-				.then(ticks_url => {
-					testdouble.when(ticks.http.get(ticks_url)).thenResolve([]);
-				});
-			});
+			before(test_data_loader([]));
 			it('should be blank if no data was loaded', () => {
 				return ticks.load_ticks()
 				.then(data => {
@@ -89,15 +110,10 @@ describe('ticks', () => {
 					});
 				});
 			});
+			after(() => testdouble.reset());
 		});
 		describe('pass 1', () => {
-			before(() => {
-				ticks.http.get = testdouble.function();
-				return ticks.static_website_url()
-				.then(ticks_url => {
-					testdouble.when(ticks.http.get(ticks_url)).thenResolve(test_data);
-				});
-			});
+			before(test_data_loader(test_data));
 			it('should load memory with ticks', () => {
 				return ticks.load_ticks()
 				.then(() => {
@@ -114,17 +130,12 @@ describe('ticks', () => {
 					expect(ticks_data['+']).to.not.deep.equal(test_data['+']);
 				});
 			});
+			after(() => testdouble.reset());
 		});
 		describe('pass 2', () => {
-			before(() => {
-				ticks.http.get = testdouble.function();
-				return ticks.static_website_url()
-				.then(ticks_url => {
-					testdouble.when(ticks.http.get(ticks_url)).thenResolve({
-						"+": [ test_data['+'][0] ]
-					});
-				});
-			});
+			before(test_data_loader({
+				"+": [ test_data['+'][0] ]
+			}));
 			it('should keep stuff in memory if not deleted', () => {
 				return ticks.load_ticks()
 				.then(data => {
@@ -137,18 +148,12 @@ describe('ticks', () => {
 					expect(ticks_data['+']).to.deep.equal(test_data['+']);
 				});
 			});
+			after(() => testdouble.reset());
 		});
 		describe('pass 3', () => {
-			const pass_3_test_data = {
+			before(test_data_loader({
 				"-": [ test_data['+'][1].id ]
-			};
-			before(() => {
-				ticks.http.get = testdouble.function();
-				return ticks.static_website_url()
-				.then(ticks_url => {
-					testdouble.when(ticks.http.get(ticks_url)).thenResolve(pass_3_test_data);
-				});
-			});
+			}));
 			it('should delete ticks marked for deletion', () => {
 				return ticks.load_ticks()
 				.then(data => {
@@ -156,15 +161,10 @@ describe('ticks', () => {
 					expect(ticks.data['-']).to.deep.equal([ test_data['+'][1].id ]);
 				});
 			});
+			after(() => testdouble.reset());
 		});
 		describe('pass 4', () => {
-			before(() => {
-				ticks.http.get = testdouble.function();
-				return ticks.static_website_url()
-				.then(ticks_url => {
-					testdouble.when(ticks.http.get(ticks_url)).thenResolve(test_data);
-				});
-			});
+			before(test_data_loader(test_data));
 			it('should remove ticks from deleted array if they are re-added', () => {
 				return ticks.load_ticks()
 				.then(data => {
@@ -178,33 +178,12 @@ describe('ticks', () => {
 					expect(ticks_data['-']).to.deep.equal([]);
 				});
 			});
+			after(() => testdouble.reset());
 		});
 	});
 
 	describe('Updated property', () => {
-		const test_data = {
-			"+": [
-				{
-					"id": "4",
-					"content": "<p>Fyran</p>",
-					"time": 1478316163,
-					"important": true
-				},
-				{
-					"id": "10",
-					"content": "<p>Tian</p>",
-					"time": 1478316164,
-					"important": false
-				}
-			]
-		};
-		before(() => {
-			ticks.http.get = testdouble.function();
-			return ticks.static_website_url()
-			.then(ticks_url => {
-				testdouble.when(ticks.http.get(ticks_url)).thenResolve(test_data);
-			});
-		});
+		before(test_data_loader(test_data));
 		it('should be added if there is none', () => {
 			return ticks.flush_data()
 			.then(() => ticks.load_ticks())
@@ -288,5 +267,6 @@ describe('ticks', () => {
 				expect(ticks.data['+'][1].updated).to.be.above(ticks.now() - 2);
 			});
 		});
+		after(() => testdouble.reset());
 	});
 });
