@@ -31,6 +31,13 @@ const find_tick = id => {
 	});
 };
 
+const flush_data = () => {
+	return q.fcall(() => {
+		data['+'] = [];
+		data['-'] = [];
+	});
+};
+
 const get_bucket = () => {
 	return config('s3.bucket', 'mybucket');
 };
@@ -115,7 +122,7 @@ const latest_data = () => {
 			"+": [],
 			"-": data["-"]
 		};
-		latest['+'] = data['+'].filter(item => item.time >= Math.floor(new Date().getTime() / 1000) - (60 * 5));
+		latest['+'] = data['+'].filter(item => item.updated >= now() - (60 * 5));
 		return latest;
 	});
 };
@@ -146,7 +153,16 @@ const load_ticks = () => {
 	})
 	.then(newdata => {
 		if (typeof newdata['+'] !== 'undefined') {
-			return q.all(newdata['+'].map(item => set_tick(item.id, item.content, item.time, item.important, item.media)))
+			return q.all(newdata['+'].map(item => {
+				return set_tick(item.id, item.content, item.time, item.important, item.media)
+				.then(() => {
+					if (item.updated) {
+						return set_updated_timestamp(item.id, item.updated);
+					} else {
+						return;
+					}
+				});
+			}))
 			.then(() => {
 				return newdata;
 			});
@@ -154,11 +170,13 @@ const load_ticks = () => {
 	});
 };
 
+const now = () => Math.floor((new Date()).getTime() / 1000);
+
 const normalize_tick = data => {
 	return q.fcall(() => {
 		var result = { // Default values:
 			"content": "",
-			"time": Math.round((new Date()).getTime() / 1000),
+			"time": now(),
 			"important": false
 		};
 		if (typeof data.id === 'undefined') {
@@ -177,6 +195,11 @@ const normalize_tick = data => {
 		if (data.content) result.content = data.content;
 		if (data.time) result.time = parseInt(data.time);
 		if (data.important) result.important = data.important;
+		if (data.updated) {
+			result.updated = data.updated;
+		} else {
+			result.updated = result.time;
+		}
 		return result;
 	});
 };
@@ -187,7 +210,8 @@ const set_tick = (id, content, time, important, media) => {
 		content: content,
 		time: time,
 		important: important,
-		media: media
+		media: media,
+		updated: now()
 	})
 	.then(newtick => {
 		if (typeof newtick.media === 'undefined') {
@@ -202,17 +226,42 @@ const set_tick = (id, content, time, important, media) => {
 	.then(newtick => {
 		return find_tick(newtick.id)
 		.then(oldtick => {
+			let changed = false;
 			if (oldtick.content !== newtick.content) {
 				oldtick.content = newtick.content;
+				changed = true;
 			}
 			if (oldtick.time !== newtick.time) {
 				oldtick.time = newtick.time;
+				changed = true;
 			}
 			if (oldtick.important !== newtick.important) {
 				oldtick.important = newtick.important;
+				changed = true;
 			}
-			if (oldtick.media !== newtick.media) {
+			if (typeof oldtick.media !== typeof newtick.media) {
 				oldtick.media = newtick.media;
+				changed = true;
+			} else {
+				if (typeof oldtick.media === 'object' && typeof newtick.media === 'object') {
+
+					if (oldtick.media.src !== newtick.media.src) {
+						oldtick.media.src = newtick.media.src;
+						changed = true;
+					}
+					if (oldtick.media.w !== newtick.media.w) {
+						oldtick.media.w = newtick.media.w;
+						changed = true;
+					}
+					if (oldtick.media.h !== newtick.media.h) {
+						oldtick.media.h = newtick.media.h;
+						changed = true;
+					}
+
+				}
+			}
+			if (changed) {
+				oldtick.updated = newtick.updated;
 			}
 		})
 		.catch(() => {
@@ -220,8 +269,24 @@ const set_tick = (id, content, time, important, media) => {
 			data['-'] = data['-'].filter(item => item !== newtick.id);
 		});
 	})
-	.then(() => {
-		data['+'].sort((a, b) => a.time - b.time);
+	.then(() => sort_data());
+};
+
+const set_updated_timestamp = (id, time) => {
+	return find_tick(id)
+	.then(tick => {
+		if (typeof time === 'number') {
+			tick.updated = time;
+		} else {
+			tick.updated = now();
+		}
+	})
+	.then(() => sort_data());
+};
+
+const sort_data = () => {
+	return q.fcall(() => {
+		data['+'].sort((a, b) => a.updated - b.updated);
 	});
 };
 
@@ -301,10 +366,7 @@ const store_full_ticks = () => {
 			s3.putObject({
 				Bucket: bucket,
 				Key: s3_key,
-				Body: JSON.stringify({
-					"+": data["+"],
-					"-": data["-"].filter(item => item !== '+').filter(item => item !== '-')
-				}),
+				Body: JSON.stringify(data),
 				ACL: 'public-read',
 				ContentType: 'application/json',
 				ContentEncoding: 'utf-8'
@@ -328,10 +390,7 @@ const store_initial_ticks = () => {
 			s3.putObject({
 				Bucket: bucket,
 				Key: s3_key,
-				Body: JSON.stringify({
-					"+": data["+"],
-					"-": data["-"].filter(item => item !== '+').filter(item => item !== '-')
-				}),
+				Body: JSON.stringify(data),
 				ACL: 'public-read',
 				ContentType: 'application/json',
 				ContentEncoding: 'utf-8'
@@ -355,10 +414,7 @@ const store_latest_ticks = () => {
 			s3.putObject({
 				Bucket: bucket,
 				Key: s3_key,
-				Body: JSON.stringify({
-					"+": data["+"],
-					"-": data["-"].filter(item => item !== '+').filter(item => item !== '-')
-				}),
+				Body: JSON.stringify(data),
 				ACL: 'public-read',
 				ContentType: 'application/json',
 				ContentEncoding: 'utf-8'
@@ -383,6 +439,7 @@ module.exports = {
 	config,
 	data,
 	delete_tick,
+	flush_data,
 	get_bucket,
 	get_region,
 	get_s3_path,
@@ -390,7 +447,9 @@ module.exports = {
 	init,
 	load_ticks,
 	normalize_tick,
+	now,
 	set_tick,
+	set_updated_timestamp,
 	static_website_url,
 	store_ticks
 };

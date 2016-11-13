@@ -181,4 +181,112 @@ describe('ticks', () => {
 		});
 	});
 
+	describe('Updated property', () => {
+		const test_data = {
+			"+": [
+				{
+					"id": "4",
+					"content": "<p>Fyran</p>",
+					"time": 1478316163,
+					"important": true
+				},
+				{
+					"id": "10",
+					"content": "<p>Tian</p>",
+					"time": 1478316164,
+					"important": false
+				}
+			]
+		};
+		before(() => {
+			ticks.http.get = testdouble.function();
+			return ticks.static_website_url()
+			.then(ticks_url => {
+				testdouble.when(ticks.http.get(ticks_url)).thenResolve(test_data);
+			});
+		});
+		it('should be added if there is none', () => {
+			return ticks.flush_data()
+			.then(() => ticks.load_ticks())
+			.then(() => {
+				expect(typeof ticks.data['+'][0].updated).to.equal('number');
+				expect(typeof ticks.data['+'][1].updated).to.equal('number');
+			});
+		});
+		it('should not change when loading remote ticks', () => {
+			test_data['+'][0].updated = 123;
+			test_data['+'][1].updated = 456;
+			return ticks.flush_data()
+			.then(() => ticks.load_ticks())
+			.then(() => {
+				expect(ticks.data['+'][0].updated).to.equal(123);
+				expect(ticks.data['+'][1].updated).to.equal(456);
+			});
+		});
+		it('should not be updated if calling set_tick without changes', () => {
+			return ticks.set_tick(
+				test_data['+'][0].id, 
+				test_data['+'][0].content, 
+				test_data['+'][0].time, 
+				test_data['+'][0].important 
+			)
+			.then(() => {
+				expect(ticks.data['+'][0].updated).to.equal(123);
+			});
+		});
+		it('should be updated if calling set_tick with changed content', () => {
+			return ticks.set_tick(
+				test_data['+'][0].id, 
+				test_data['+'][0].content + 'test', 
+				test_data['+'][0].time, 
+				test_data['+'][0].important 
+			)
+			.then(() => {
+				// NOTE: They swapped place (index) because the data['+'] is
+				// sorted on the .updated property.
+				expect(ticks.data['+'][0].updated).to.equal(456);
+				expect(ticks.data['+'][1].updated).to.be.above(ticks.now() - 2);
+			});
+		});
+		it('should be updated if calling set_updated_timestamp() with a time', () => {
+			return ticks.set_updated_timestamp(
+				test_data['+'][0].id, 
+				123
+			)
+			.then(() => {
+				expect(ticks.data['+'][0].updated).to.equal(123);
+			});
+		});
+		it('should be updated if calling set_tick with changed time', () => {
+			return ticks.set_tick(
+				test_data['+'][0].id, 
+				test_data['+'][0].content, 
+				test_data['+'][0].time - 10, 
+				test_data['+'][0].important 
+			)
+			.then(() => {
+				// NOTE: They swapped place (index) because the data['+'] is
+				// sorted on the .updated property.
+				expect(ticks.data['+'][0].updated).to.equal(456);
+				expect(ticks.data['+'][1].updated).to.be.above(ticks.now() - 2);
+			});
+		});
+		it('should be updated if calling set_tick with changed important', () => {
+			return ticks.set_updated_timestamp(
+				test_data['+'][0].id, 
+				123
+			).then(() => {
+				return ticks.set_tick(
+					test_data['+'][1].id, 
+					test_data['+'][1].content, 
+					test_data['+'][1].time, 
+					test_data['+'][1].important = true
+				)
+			})
+			.then(() => {
+				expect(ticks.data['+'][0].updated).to.equal(123);
+				expect(ticks.data['+'][1].updated).to.be.above(ticks.now() - 2);
+			});
+		});
+	});
 });
