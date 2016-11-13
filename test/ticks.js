@@ -48,16 +48,6 @@ describe('ticks', () => {
 		after(() => testdouble.reset());
 	});
 
-	describe('init()', () => {
-		it('should load configuration from config.json', () => {
-			ticks.config.load = testdouble.function();
-			return ticks.init()
-			.then(() => {
-				testdouble.verify(ticks.config.load('config.json'));
-			});
-		});
-	});
-
 	describe('get_bucket()', () => {
 		it('returns a non-empty string', () => {
 			return ticks.get_bucket()
@@ -85,6 +75,16 @@ describe('ticks', () => {
 				expect(path).to.be.a('string');
 				expect(path).to.not.equal('');
 			})
+		});
+	});
+
+	describe('init()', () => {
+		it('should load configuration from config.json', () => {
+			ticks.config.load = testdouble.function();
+			return ticks.init()
+			.then(() => {
+				testdouble.verify(ticks.config.load('config.json'));
+			});
 		});
 	});
 
