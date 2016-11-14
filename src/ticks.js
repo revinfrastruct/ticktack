@@ -237,27 +237,22 @@ class Ticks {
 		});
 	}
 
-	s3upload(s3_key, data, content_type, content_encoding) {
+	s3upload(s3_key, data, options) {
 		return this.get_bucket()
 		.then(bucket => {
 			const deferred = q.defer();
-			const options = {
+			if (typeof options === 'undefined') options = {};
+			const s3_options = Object.assign({
 				Bucket: bucket,
 				Key: s3_key,
 				ACL: 'public-read'
-			};
+			}, options);
 			if (typeof data === 'object') {
 				options.Body = JSON.stringify(data);
 				options.ContentType = 'application/json';
 				options.ContentEncoding = 'utf-8';
 			} else {
 				options.Body = data;
-			}
-			if (content_type) {
-				options.ContentType = content_type;
-			}
-			if (content_encoding) {
-				options.ContentEncoding;
 			}
 			s3.putObject(options, err => {
 				if (err) {
@@ -376,7 +371,7 @@ class Ticks {
 					return this.s3exists(s3_key)
 					.then(exists => {
 						if (!exists) {
-							return this.s3upload(s3_key, filedata, 'image/jpeg');
+							return this.s3upload(s3_key, filedata, { ContentType: 'image/jpeg' });
 						} else {
 							return s3_key;
 						}
@@ -404,11 +399,14 @@ class Ticks {
 	}
 
 	store_ticks() {
-		return q.all([
-			this.store_full_ticks(),
-			this.store_initial_ticks(),
-			this.store_latest_ticks()
-		]);
+		return this.store_full_ticks()
+		.then(() => {
+			// Only update initial and latest, if full was successful.
+			return q.all([
+				this.store_initial_ticks(),
+				this.store_latest_ticks()
+			]);
+		});
 	}
 
 	store_full_ticks() {
