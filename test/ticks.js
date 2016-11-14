@@ -36,6 +36,38 @@ describe('ticks', () => {
 		};
 	};
 
+	describe('delete_tick()', () => {
+		before(test_data_loader(test_data));
+		it('should remove ticks', () => {
+			const id = test_data['+'][0].id;
+			const other_id = test_data['+'][1].id;
+			return ticks.flush_data()
+			.then(() => ticks.load_ticks())
+			.then(() => ticks.delete_tick(id))
+			.then(() => {
+				expect(ticks.data['-']).to.deep.equal([ id ]);
+				expect(ticks.data['+'][0].id).to.equal(other_id);
+				expect(ticks.data['+'].length).to.equal(1);
+			});
+		});
+	});
+
+	describe('find_tick()', () => {
+		before(test_data_loader(test_data));
+		it('to return the tick you asked for', () => {
+			return ticks.flush_data()
+			.then(() => ticks.load_ticks())
+			.then(() => ticks.find_tick(ticks.data['+'][0].id))
+			.then(result => {
+				expect(result).to.deep.equal(ticks.data['+'][0]);
+			})
+			.then(() => ticks.find_tick(ticks.data['+'][1].id))
+			.then(result => {
+				expect(result).to.deep.equal(ticks.data['+'][1]);
+			});
+		});
+	});
+
 	describe('flush_data()', () => {
 		before(test_data_loader(test_data));
 		it('should flush all items, including deletes', () => {
@@ -62,6 +94,16 @@ describe('ticks', () => {
 		});
 	});
 
+	describe('get_media_path()', () => {
+		it('returns a non-empty string', () => {
+			return ticks.get_media_path()
+			.then(path => {
+				expect(path).to.be.a('string');
+				expect(path).to.not.equal('');
+			})
+		});
+	});
+
 	describe('get_region()', () => {
 		it('returns a non-empty string', () => {
 			return ticks.get_region()
@@ -75,6 +117,26 @@ describe('ticks', () => {
 	describe('get_s3_path()', () => {
 		it('returns a non-empty string', () => {
 			return ticks.get_s3_path()
+			.then(path => {
+				expect(path).to.be.a('string');
+				expect(path).to.not.equal('');
+			})
+		});
+	});
+
+	describe('get_s3_initial_path()', () => {
+		it('returns a non-empty string', () => {
+			return ticks.get_s3_initial_path()
+			.then(path => {
+				expect(path).to.be.a('string');
+				expect(path).to.not.equal('');
+			})
+		});
+	});
+
+	describe('get_s3_latest_path()', () => {
+		it('returns a non-empty string', () => {
+			return ticks.get_s3_latest_path()
 			.then(path => {
 				expect(path).to.be.a('string');
 				expect(path).to.not.equal('');
@@ -112,6 +174,9 @@ describe('ticks', () => {
 				testdouble.verify(ticks.config.load('config.json'));
 			});
 		});
+	});
+
+	describe('latest_data()', () => {
 	});
 
 	describe('load_ticks()', () => {
@@ -195,6 +260,47 @@ describe('ticks', () => {
 			});
 			after(() => testdouble.reset());
 		});
+	});
+
+	describe('now()', () => {
+		const time = ticks.now();
+		expect(typeof time).to.equal('number');
+	});
+
+	describe('normalize_tick()', () => {
+	});
+
+	describe('s3download()', () => {
+	});
+
+	describe('s3exists()', () => {
+	});
+
+	describe('s3upload()', () => {
+	});
+
+	describe('set_tick()', () => {
+	});
+
+	describe('set_updated_timestamp()', () => {
+	});
+
+	describe('sort_data()', () => {
+	});
+
+	describe('store_media()', () => {
+	});
+
+	describe('store_ticks()', () => {
+	});
+
+	describe('store_full_ticks()', () => {
+	});
+
+	describe('store_initial_ticks()', () => {
+	});
+
+	describe('store_latest_ticks()', () => {
 	});
 
 	describe('Updated property', () => {
