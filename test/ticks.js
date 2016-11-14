@@ -92,6 +92,16 @@ describe('ticks', () => {
 				expect(hash).to.equal('a80f839cd4f83f6c3dafc87feae470045e4eb0d366397d5c6ce34ba1739f734d');
 			});
 		});
+		it('should result in a rejected promise if file does not exist.', () => {
+			let error;
+			return ticks.hash_file('/this/is/a/non-existing/file/i/hope')
+			.catch(err => {
+				error = err;
+			})
+			.then(() => {
+				expect(error.code).to.equal('ENOENT');
+			});
+		});
 	});
 
 	describe('init()', () => {
