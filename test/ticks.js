@@ -88,6 +88,7 @@ describe('ticks', () => {
 			return fs.writeFile(file, 'The quick brown fox jumps over the lazy dog.')
 			.then(() => ticks.hash_file(file))
 			.then(hash => {
+				fs.unlink(file); // Clean-up.
 				expect(hash).to.equal('a80f839cd4f83f6c3dafc87feae470045e4eb0d366397d5c6ce34ba1739f734d');
 			});
 		});
