@@ -1,8 +1,8 @@
 const aws = require('aws-sdk');
 const exec = require('child-process-promise').exec;
 const fs = require('fs-promise');
-const md5 = require('md5-file/promise');
 const q = require('q');
+const sha3_256 = require('js-sha3').sha3_256;
 const smplcnf = require('smplcnf');
 const url = require('url');
 
@@ -93,6 +93,22 @@ class Ticks {
 		});
 	}
 
+	hash_file(file) {
+		const deferred = q.defer();
+		const hash = sha3_256.create();
+		const stream = fs.createReadStream(file);
+		stream.on('data', chunk => {
+			hash.update(chunk);
+		});
+		stream.on('end', () => {
+			deferred.resolve(hash.hex());
+		});
+		stream.on('error', err => {
+			deferred.reject(err);
+		});
+		return deferred.promise;
+	}
+
 	init() {
 		return q.fcall(() => config.load('config.json'))
 		.then(() => this.get_region())
@@ -135,7 +151,11 @@ class Ticks {
 			throw new Error('Could not read current ticks from Amazon S3.');
 		})
 		.then(newdata => {
-			return JSON.parse(newdata.Body.toString());
+			if (Buffer.isBuffer(newdata.Body)) {
+				return JSON.parse(newdata.Body.toString());
+			} else {
+				return newdata.Body;
+			}
 		})
 		.then(newdata => {
 			if (typeof newdata['-'] !== 'undefined') {
@@ -365,7 +385,7 @@ class Ticks {
 				let width, height;
 				[ width, height ] = imginfo['2'].split('x');
 
-				return q.all([ this.get_media_path(), md5(oldmedia.src), fs.readFile(oldmedia.src) ])
+				return q.all([ this.get_media_path(), hash_file(oldmedia.src), fs.readFile(oldmedia.src) ])
 				.spread((s3_path, checksum, filedata) => {
 					let s3_key = s3_path + '/' + checksum + '.jpg';
 					return this.s3exists(s3_key)

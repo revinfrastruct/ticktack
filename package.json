@@ -10,13 +10,14 @@
     "commander": "2.9.0",
     "fs-promise": "1.0.0",
     "get-stdin": "5.0.1",
-    "md5-file": "3.1.1",
+    "js-sha3": "0.5.5",
     "q": "1.4.1",
     "smplcnf": "1.1.0"
   },
   "devDependencies": {
     "chai": "3.5.0",
     "mocha": "3.1.2",
+    "tempfile": "1.1.1",
     "testdouble": "1.9.0"
   },
   "scripts": {

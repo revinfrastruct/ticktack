@@ -1,4 +1,6 @@
 const expect = require('chai').expect;
+const fs = require('fs-promise');
+const tempfile = require('tempfile');
 const testdouble = require('testdouble');
 const ticks = require('../src/ticks');
 const url = require('url');
@@ -27,7 +29,9 @@ describe('ticks', () => {
 			ticks.s3download = testdouble.function();
 			return ticks.get_s3_path()
 			.then(s3_key => {
-				testdouble.when(ticks.s3download(s3_key)).thenResolve(data);
+				testdouble.when(ticks.s3download(s3_key)).thenResolve({
+					Body: data
+				});
 			});
 		};
 	};
@@ -75,6 +79,17 @@ describe('ticks', () => {
 				expect(path).to.be.a('string');
 				expect(path).to.not.equal('');
 			})
+		});
+	});
+
+	describe('hash_file()', () => {
+		it('should return sha3-256 hash of file content.', () => {
+			const file = tempfile();
+			return fs.writeFile(file, 'The quick brown fox jumps over the lazy dog.')
+			.then(() => ticks.hash_file(file))
+			.then(hash => {
+				expect(hash).to.equal('a80f839cd4f83f6c3dafc87feae470045e4eb0d366397d5c6ce34ba1739f734d');
+			});
 		});
 	});
 
