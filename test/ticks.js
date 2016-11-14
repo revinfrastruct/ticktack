@@ -5,24 +5,10 @@ const testdouble = require('testdouble');
 const ticks = require('../src/ticks');
 const url = require('url');
 
-describe('ticks', () => {
+const testdata1 = require('./testfile1.json');
+const testdata2 = require('./testfile2.json');
 
-	const test_data = {
-		"+": [
-			{
-				"id": "4",
-				"content": "<p>Yo</p>",
-				"time": 1478316163,
-				"important": true
-			},
-			{
-				"id": "10",
-				"content": "<p>Yo yo</p>",
-				"time": 1478316164,
-				"important": false
-			}
-		]
-	};
+describe('ticks', () => {
 
 	const test_data_loader = (data) => {
 		return () => {
@@ -37,10 +23,10 @@ describe('ticks', () => {
 	};
 
 	describe('delete_tick()', () => {
-		before(test_data_loader(test_data));
+		before(test_data_loader(testdata1));
 		it('should remove ticks', () => {
-			const id = test_data['+'][0].id;
-			const other_id = test_data['+'][1].id;
+			const id = testdata1['+'][0].id;
+			const other_id = testdata1['+'][1].id;
 			return ticks.flush_data()
 			.then(() => ticks.load_ticks())
 			.then(() => ticks.delete_tick(id))
@@ -53,7 +39,7 @@ describe('ticks', () => {
 	});
 
 	describe('find_tick()', () => {
-		before(test_data_loader(test_data));
+		before(test_data_loader(testdata1));
 		it('to return the tick you asked for', () => {
 			return ticks.flush_data()
 			.then(() => ticks.load_ticks())
@@ -69,7 +55,7 @@ describe('ticks', () => {
 	});
 
 	describe('flush_data()', () => {
-		before(test_data_loader(test_data));
+		before(test_data_loader(testdata1));
 		it('should flush all items, including deletes', () => {
 			return ticks.flush_data()
 			.then(() => ticks.load_ticks())
@@ -193,7 +179,7 @@ describe('ticks', () => {
 			after(() => testdouble.reset());
 		});
 		describe('pass 1', () => {
-			before(test_data_loader(test_data));
+			before(test_data_loader(testdata1));
 			it('should load memory with ticks', () => {
 				return ticks.load_ticks()
 				.then(() => {
@@ -203,18 +189,18 @@ describe('ticks', () => {
 					delete ticks_data['+'][0]['updated'];
 					delete ticks_data['+'][1]['updated'];
 
-					expect(ticks_data['+']).to.deep.equal(test_data['+']);
+					expect(ticks_data['+']).to.deep.equal(testdata1['+']);
 					
 					// They should not be the same object, just idential objects:
-					test_data['+'][0].content = '<p>Something else</p>';
-					expect(ticks_data['+']).to.not.deep.equal(test_data['+']);
+					testdata1['+'][0].content = '<p>Something else</p>';
+					expect(ticks_data['+']).to.not.deep.equal(testdata1['+']);
 				});
 			});
 			after(() => testdouble.reset());
 		});
 		describe('pass 2', () => {
 			before(test_data_loader({
-				"+": [ test_data['+'][0] ]
+				"+": [ testdata1['+'][0] ]
 			}));
 			it('should keep stuff in memory if not deleted', () => {
 				return ticks.load_ticks()
@@ -225,26 +211,26 @@ describe('ticks', () => {
 					delete ticks_data['+'][0]['updated'];
 					delete ticks_data['+'][1]['updated'];
 
-					expect(ticks_data['+']).to.deep.equal(test_data['+']);
+					expect(ticks_data['+']).to.deep.equal(testdata1['+']);
 				});
 			});
 			after(() => testdouble.reset());
 		});
 		describe('pass 3', () => {
 			before(test_data_loader({
-				"-": [ test_data['+'][1].id ]
+				"-": [ testdata1['+'][1].id ]
 			}));
 			it('should delete ticks marked for deletion', () => {
 				return ticks.load_ticks()
 				.then(data => {
-					expect(ticks.data['+']).to.deep.equal([ test_data['+'][0] ]);
-					expect(ticks.data['-']).to.deep.equal([ test_data['+'][1].id ]);
+					expect(ticks.data['+']).to.deep.equal([ testdata1['+'][0] ]);
+					expect(ticks.data['-']).to.deep.equal([ testdata1['+'][1].id ]);
 				});
 			});
 			after(() => testdouble.reset());
 		});
 		describe('pass 4', () => {
-			before(test_data_loader(test_data));
+			before(test_data_loader(testdata1));
 			it('should remove ticks from deleted array if they are re-added', () => {
 				return ticks.load_ticks()
 				.then(data => {
@@ -254,7 +240,7 @@ describe('ticks', () => {
 					delete ticks_data['+'][0]['updated'];
 					delete ticks_data['+'][1]['updated'];
 
-					expect(ticks_data['+']).to.deep.equal(test_data['+']);
+					expect(ticks_data['+']).to.deep.equal(testdata1['+']);
 					expect(ticks_data['-']).to.deep.equal([]);
 				});
 			});
@@ -304,7 +290,7 @@ describe('ticks', () => {
 	});
 
 	describe('Updated property', () => {
-		before(test_data_loader(test_data));
+		before(test_data_loader(testdata1));
 		it('should be added if there is none', () => {
 			return ticks.flush_data()
 			.then(() => ticks.load_ticks())
@@ -314,8 +300,8 @@ describe('ticks', () => {
 			});
 		});
 		it('should not change when loading remote ticks', () => {
-			test_data['+'][0].updated = 123;
-			test_data['+'][1].updated = 456;
+			testdata1['+'][0].updated = 123;
+			testdata1['+'][1].updated = 456;
 			return ticks.flush_data()
 			.then(() => ticks.load_ticks())
 			.then(() => {
@@ -325,10 +311,10 @@ describe('ticks', () => {
 		});
 		it('should not be updated if calling set_tick without changes', () => {
 			return ticks.set_tick(
-				test_data['+'][0].id, 
-				test_data['+'][0].content, 
-				test_data['+'][0].time, 
-				test_data['+'][0].important 
+				testdata1['+'][0].id, 
+				testdata1['+'][0].content, 
+				testdata1['+'][0].time, 
+				testdata1['+'][0].important 
 			)
 			.then(() => {
 				expect(ticks.data['+'][0].updated).to.equal(123);
@@ -336,10 +322,10 @@ describe('ticks', () => {
 		});
 		it('should be updated if calling set_tick with changed content', () => {
 			return ticks.set_tick(
-				test_data['+'][0].id, 
-				test_data['+'][0].content + 'test', 
-				test_data['+'][0].time, 
-				test_data['+'][0].important 
+				testdata1['+'][0].id, 
+				testdata1['+'][0].content + 'test', 
+				testdata1['+'][0].time, 
+				testdata1['+'][0].important 
 			)
 			.then(() => {
 				// NOTE: They swapped place (index) because the data['+'] is
@@ -350,7 +336,7 @@ describe('ticks', () => {
 		});
 		it('should be updated if calling set_updated_timestamp() with a time', () => {
 			return ticks.set_updated_timestamp(
-				test_data['+'][0].id, 
+				testdata1['+'][0].id, 
 				123
 			)
 			.then(() => {
@@ -359,10 +345,10 @@ describe('ticks', () => {
 		});
 		it('should be updated if calling set_tick with changed time', () => {
 			return ticks.set_tick(
-				test_data['+'][0].id, 
-				test_data['+'][0].content, 
-				test_data['+'][0].time - 10, 
-				test_data['+'][0].important 
+				testdata1['+'][0].id, 
+				testdata1['+'][0].content, 
+				testdata1['+'][0].time - 10, 
+				testdata1['+'][0].important 
 			)
 			.then(() => {
 				// NOTE: They swapped place (index) because the data['+'] is
@@ -373,14 +359,14 @@ describe('ticks', () => {
 		});
 		it('should be updated if calling set_tick with changed important', () => {
 			return ticks.set_updated_timestamp(
-				test_data['+'][0].id, 
+				testdata1['+'][0].id, 
 				123
 			).then(() => {
 				return ticks.set_tick(
-					test_data['+'][1].id, 
-					test_data['+'][1].content, 
-					test_data['+'][1].time, 
-					test_data['+'][1].important = true
+					testdata1['+'][1].id, 
+					testdata1['+'][1].content, 
+					testdata1['+'][1].time, 
+					testdata1['+'][1].important = true
 				)
 			})
 			.then(() => {
