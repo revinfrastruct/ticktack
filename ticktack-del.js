@@ -19,7 +19,7 @@ if (commandline.args.length > 1) {
 ticks.init()
 .then(() => ticks.load_ticks())
 .then(() => ticks.delete_tick(commandline.args[0]))
-.then(() => ticks.store_ticks())
+.then(() => ticks.store_feeds())
 .catch(err => {
 	console.error(err);
 	process.exit(1);

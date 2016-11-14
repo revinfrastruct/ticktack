@@ -90,6 +90,15 @@ describe('ticks', () => {
 		});
 	});
 
+	describe('get_partial_feed_definitions()', () => {
+		it('returns an array', () => {
+			return ticks.get_partial_feed_definitions()
+			.then(def => {
+				expect(Array.isArray(def)).to.equal(true);
+			});
+		});
+	});
+
 	describe('get_region()', () => {
 		it('returns a non-empty string', () => {
 			return ticks.get_region()
@@ -103,26 +112,6 @@ describe('ticks', () => {
 	describe('get_s3_path()', () => {
 		it('returns a non-empty string', () => {
 			return ticks.get_s3_path()
-			.then(path => {
-				expect(path).to.be.a('string');
-				expect(path).to.not.equal('');
-			})
-		});
-	});
-
-	describe('get_s3_initial_path()', () => {
-		it('returns a non-empty string', () => {
-			return ticks.get_s3_initial_path()
-			.then(path => {
-				expect(path).to.be.a('string');
-				expect(path).to.not.equal('');
-			})
-		});
-	});
-
-	describe('get_s3_latest_path()', () => {
-		it('returns a non-empty string', () => {
-			return ticks.get_s3_latest_path()
 			.then(path => {
 				expect(path).to.be.a('string');
 				expect(path).to.not.equal('');
@@ -163,6 +152,7 @@ describe('ticks', () => {
 	});
 
 	describe('latest_data()', () => {
+		before(test_data_loader(testdata2));
 	});
 
 	describe('load_ticks()', () => {
@@ -277,16 +267,13 @@ describe('ticks', () => {
 	describe('store_media()', () => {
 	});
 
-	describe('store_ticks()', () => {
+	describe('store_feeds()', () => {
 	});
 
-	describe('store_full_ticks()', () => {
+	describe('store_full_feed()', () => {
 	});
 
-	describe('store_initial_ticks()', () => {
-	});
-
-	describe('store_latest_ticks()', () => {
+	describe('store_partial_feeds()', () => {
 	});
 
 	describe('Updated property', () => {
@@ -376,4 +363,33 @@ describe('ticks', () => {
 		});
 		after(() => testdouble.reset());
 	});
+
+	describe('Partial feeds', () => {
+
+		const test_feed_defs = [
+			{
+				"key": "/ticker/inital.json",
+				"max_items": 10
+			},
+			{
+				"key": "/tickers/latest.json",
+				"max_age": 300
+			}
+		];
+
+		before(() => {
+			ticks.get_partial_feed_definitions = testdouble.function();
+			testdouble.when(ticks.get_partial_feed_definitions()).thenResolve(test_feed_defs);
+		})
+
+		it('should generate the same number of feeds as there are feed definitions', () => {
+			return ticks.generate_partial_feeds()
+			.then(feeds => {
+				expect(feeds.length).to.equal(test_feed_defs.length);
+				console.log(JSON.stringify(feeds));
+			});
+		});
+
+	});
+
 });

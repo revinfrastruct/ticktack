@@ -24,7 +24,7 @@ ticks.init()
 .then(() => ticks.load_ticks())
 .then(() => get_stdin())
 .then(content => ticks.set_tick(commandline.args[0], content, commandline.time, commandline.important ? true : false, commandline.media))
-.then(() => ticks.store_ticks())
+.then(() => ticks.store_feeds())
 .catch(err => {
 	console.error(err);
 	process.exit(1);

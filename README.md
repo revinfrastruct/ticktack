@@ -36,9 +36,19 @@ like this:
 			"media_path": "/tickers/media"
 		},
 		"feeds": {
-			"full": "/tickers/data/myevent.json",
-			"initial": "/tickers/data/myevent.initial.json",
-			"latest": "/tickers/data/myevent.latest.json"
+			"full": {
+				"key": "/tickers/data/full.json"
+			},
+			"partial": [
+				{
+					"key": "/tickers/data/initial.json",
+					"max_items": 10
+				},
+				{
+					"key": "/tickers/data/latest.json",
+					"max_age": 300
+				}
+			]
 		}
 	}
 

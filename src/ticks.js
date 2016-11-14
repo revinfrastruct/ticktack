@@ -45,6 +45,37 @@ class Ticks {
 		});
 	}
 
+	generate_partial_feeds() {
+		return this.get_partial_feed_definitions()
+		.then(defs => {
+			const result = [];
+			return q.all(defs.map((def, index) => {
+				result.push(
+					{
+						key: def.key,
+						data: {
+							'+': this.data['+'].filter(item => {
+								if (defs.max_age) {
+									if (now() - item.updated > defs.max_age) {
+										return false;
+									}
+								}
+								if (defs.max_items) {
+									if (index <= (data['+'].length - defs.max_items)) {
+										return false;
+									}
+								}
+								return true;
+							}),
+							'-': this.data['-']
+						}
+					}
+				);
+			}))
+			.then(() => result);
+		});
+	}
+
 	get_bucket() {
 		return config('s3.bucket', 'mybucket');
 	}
@@ -59,32 +90,16 @@ class Ticks {
 		});
 	}
 
+	get_partial_feed_definitions() {
+		return config('feeds.partial', []);
+	}
+
 	get_region() {
 		return config('s3.region', 'eu-central-1');
 	}
 
 	get_s3_path() {
-		return config('feeds.full', '/ticktack/ticker.json')
-		.then(path => {
-			if (path.charAt(0) === '/') {
-				return path.substr(1);
-			}
-			return path;
-		});
-	}
-
-	get_s3_initial_path() {
-		return config('feeds.initial', '/ticktack/ticker-initial.json')
-		.then(path => {
-			if (path.charAt(0) === '/') {
-				return path.substr(1);
-			}
-			return path;
-		});
-	}
-
-	get_s3_latest_path() {
-		return config('feeds.latest', '/ticktack/ticker-latest.json')
+		return config('feeds.full.key', '/ticktack/ticker.json')
 		.then(path => {
 			if (path.charAt(0) === '/') {
 				return path.substr(1);
@@ -117,27 +132,6 @@ class Ticks {
 				apiVersion: '2006-03-01',
 				region: region
 			});
-		});
-	}
-
-	initial_data() {
-		return q.fcall(() => {
-			const initdata = {
-				'+': this.data['+'].slice(-10),
-				'-': this.data['-']
-			};
-			return initdata;
-		});
-	}
-
-	latest_data() {
-		return q.fcall(() => {
-			const latest = {
-				'+': [],
-				'-': this.data['-']
-			};
-			latest['+'] = this.data['+'].filter(item => item.updated >= this.now() - (60 * 5));
-			return latest;
 		});
 	}
 
@@ -418,36 +412,24 @@ class Ticks {
 		});
 	}
 
-	store_ticks() {
-		return this.store_full_ticks()
-		.then(() => {
-			// Only update initial and latest, if full was successful.
-			return q.all([
-				this.store_initial_ticks(),
-				this.store_latest_ticks()
-			]);
-		});
+	store_feeds() {
+		return this.store_full_feed()
+		.then(this.store_partial_feeds());
 	}
 
-	store_full_ticks() {
+	store_full_feed() {
 		return this.get_s3_path()
 		.then(s3_key => this.s3upload(s3_key, data));
 	}
 
-	store_initial_ticks() {
-		return q.all([ this.get_s3_initial_path(), this.initial_data() ])
-		.spread((s3_key, data) => {
-			return this.s3upload(s3_key, data);
+	store_partial_feeds() {
+		return generate_partial_feeds()
+		.then(feeds => {
+			return q.all(feeds.map(feed => {
+				return this.s3upload(feed.key, feed.data);
+			}));
 		});
 	}
-
-	store_latest_ticks() {
-		return q.all([ this.get_s3_latest_path(), this.latest_data() ])
-		.spread((s3_key, data) => {
-			return this.s3upload(s3_key, data);
-		});
-	}
-
 }
 
 module.exports = new Ticks();
