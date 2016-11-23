@@ -377,21 +377,30 @@ describe('ticks', () => {
 			}
 		];
 
+		let feeds, initialfeed, latestfeed;
+
 		before(test_data_loader(testdata2));
 		before(() => {
 			ticks.get_partial_feed_definitions = testdouble.function();
 			testdouble.when(ticks.get_partial_feed_definitions()).thenResolve(test_feed_defs);
+
+			return ticks.flush_data()
+			.then(() => ticks.load_ticks())
+			.then(() => ticks.generate_partial_feeds())
+			.then(f => feeds = f);
 		})
 
 		it('should generate the same number of feeds as there are feed definitions', () => {
-			return ticks.generate_partial_feeds()
-			.then(feeds => {
-				return ticks.flush_data()
-				.then(() => ticks.load_ticks())
-				.then(() => {
-					expect(feeds.length).to.equal(test_feed_defs.length);
-				});
-			});
+			expect(feeds.length).to.equal(test_feed_defs.length);
+		});
+		it('should generate one feed for each key given', () => {
+			initialfeed = feeds.filter(feed => feed.key === test_feed_defs[0].key);
+			latestfeed = feeds.filter(feed => feed.key === test_feed_defs[1].key);
+			expect(initialfeed.length).to.equal(1);
+			expect(latestfeed.length).to.equal(1);
+		});
+		it('should generate a initial feed with right number of items', () => {
+			expect(initialfeed[0].data['+'].length).to.equal(test_feed_defs[0].max_items);
 		});
 
 	});

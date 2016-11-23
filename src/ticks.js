@@ -49,19 +49,19 @@ class Ticks {
 		return this.get_partial_feed_definitions()
 		.then(defs => {
 			const result = [];
-			return q.all(defs.map((def, index) => {
+			return q.all(defs.map(def => {
 				result.push(
 					{
 						key: def.key,
 						data: {
-							'+': this.data['+'].filter(item => {
-								if (defs.max_age) {
-									if (now() - item.updated > defs.max_age) {
+							'+': this.data['+'].filter((item, index) => {
+								if (def.max_age) {
+									if (this.now() - item.updated > def.max_age) {
 										return false;
 									}
 								}
-								if (defs.max_items) {
-									if (index <= (data['+'].length - defs.max_items)) {
+								if (def.max_items) {
+									if (index < (this.data['+'].length - def.max_items)) {
 										return false;
 									}
 								}
