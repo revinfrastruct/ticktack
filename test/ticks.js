@@ -377,6 +377,7 @@ describe('ticks', () => {
 			}
 		];
 
+		before(test_data_loader(testdata2));
 		before(() => {
 			ticks.get_partial_feed_definitions = testdouble.function();
 			testdouble.when(ticks.get_partial_feed_definitions()).thenResolve(test_feed_defs);
@@ -385,8 +386,11 @@ describe('ticks', () => {
 		it('should generate the same number of feeds as there are feed definitions', () => {
 			return ticks.generate_partial_feeds()
 			.then(feeds => {
-				expect(feeds.length).to.equal(test_feed_defs.length);
-				console.log(JSON.stringify(feeds));
+				return ticks.flush_data()
+				.then(() => ticks.load_ticks())
+				.then(() => {
+					expect(feeds.length).to.equal(test_feed_defs.length);
+				});
 			});
 		});
 
