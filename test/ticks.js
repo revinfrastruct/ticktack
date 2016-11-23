@@ -80,6 +80,9 @@ describe('ticks', () => {
 		});
 	});
 
+	describe('get_ids()', () => {
+	});
+
 	describe('get_media_path()', () => {
 		it('returns a non-empty string', () => {
 			return ticks.get_media_path()
@@ -444,6 +447,24 @@ describe('ticks', () => {
 			// An error here can be caused by updated-timestamp being set when
 			// loading data.
 			expect(latestfeed[0].data['+'].length).to.equal(0);
+		});
+		it('should generate non-empty latest feed if we change some stuff', () => {
+			return ticks.get_ids()
+			.then(ids => {
+				return ticks.find_tick(ids[0]);
+			})
+			.then(tick => {
+				return ticks.set_tick(tick.id, 'Testar', tick.time, tick.important, tick.media);
+			})
+			.then(() => ticks.generate_partial_feeds())
+			.then(f => feeds = f)
+			.then(() => {
+				initialfeed = feeds.filter(feed => feed.key === test_feed_defs[0].key);
+				latestfeed = feeds.filter(feed => feed.key === test_feed_defs[1].key);
+			})
+			.then(() => {
+				expect(latestfeed[0].data['+'].length).to.equal(1);
+			});
 		});
 
 	});

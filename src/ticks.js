@@ -80,6 +80,12 @@ class Ticks {
 		return config('s3.bucket', 'mybucket');
 	}
 
+	get_ids() {
+		return q.fcall(() => {
+			return this.data['+'].map(item => item.id);
+		});
+	}
+
 	get_media_path() {
 		return config('s3.media_path', '/ticktack/media')
 		.then(path => {
