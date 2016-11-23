@@ -402,6 +402,11 @@ describe('ticks', () => {
 		it('should generate a initial feed with right number of items', () => {
 			expect(initialfeed[0].data['+'].length).to.equal(test_feed_defs[0].max_items);
 		});
+		it('should generate an empty latest feed, since everything is so old in the test data', () => {
+			// An error here can be caused by updated-timestamp being set when
+			// loading data.
+			expect(latestfeed[0].data['+'].length).to.equal(0);
+		});
 
 	});
 

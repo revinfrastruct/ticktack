@@ -168,7 +168,7 @@ class Ticks {
 						if (item.updated) {
 							return this.set_updated_timestamp(item.id, item.updated);
 						} else {
-							return;
+							return this.set_updated_timestamp(item.id, item.time);
 						}
 					});
 				}))
