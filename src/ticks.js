@@ -193,6 +193,11 @@ class Ticks {
 			if (typeof data.id === 'undefined') {
 				throw new Error('No ID in tick data.');
 			}
+			if (typeof data.id === 'string') {
+				result.id = data.id;
+			} else {
+				result.id = "" + data.id;
+			}
 			if (typeof data.media === 'string' && data.media !== '') {
 				result.media = {
 					"src": data.media,
@@ -202,7 +207,6 @@ class Ticks {
 			} else if (typeof data.media === 'object') {
 				result.media = data.media;
 			}
-			result.id = data.id;
 			if (data.content) result.content = data.content;
 			if (data.time) result.time = parseInt(data.time);
 			if (data.important) result.important = data.important;

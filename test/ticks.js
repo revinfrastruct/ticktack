@@ -244,6 +244,44 @@ describe('ticks', () => {
 	});
 
 	describe('normalize_tick()', () => {
+
+		it('should make id into a string', () => {
+			return ticks.normalize_tick({
+				id: 5,
+				content: "Hepp",
+				time: 12345,
+				important: false,
+				updated: 12345
+			})
+			.then(tick => {
+				expect(tick).to.deep.equal({
+					id: "5",
+					content: "Hepp",
+					time: 12345,
+					important: false,
+					updated: 12345
+				});
+			});
+		});
+
+		it('should add updated field if it does not exist', () => {
+			return ticks.normalize_tick({
+				id: "5",
+				content: "Hepp",
+				time: 12345,
+				important: false
+			})
+			.then(tick => {
+				expect(tick).to.deep.equal({
+					id: "5",
+					content: "Hepp",
+					time: 12345,
+					important: false,
+					updated: 12345
+				});
+			});
+		});
+
 	});
 
 	describe('s3download()', () => {
